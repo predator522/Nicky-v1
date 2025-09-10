@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nicky v1 Web Toolkit</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000000; /* Black background */
+      color: #007bff; /* Bright blue text */
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      text-align: center;
+    }
+    header {
+      padding: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.8);
+      text-shadow: 0 0 10px #007bff, 0 0 20px #0056b3; /* Darker blue glow */
+      box-shadow: 0 0 15px rgba(0, 123, 255, 0.6);
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+    }
+    input, button {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      margin: 8px 0;
+      font-size: 15px;
+      background: #1a1a1a; /* Dark gray for contrast */
+      color: #007bff;
+    }
+    input {
+      width: 100%;
+      margin-bottom: 12px;
+      border: 1px solid #007bff;
+    }
+    button {
+      background: linear-gradient(45deg, #007bff, #0056b3); /* Blue to darker blue */
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: linear-gradient(45deg, #0056b3, #007bff);
+      box-shadow: 0 0 10px #007bff;
+    }
+    .tool-item {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tool-item span {
+      font-weight: bold;
+    }
+    #searchBox {
+      width: 100%;
+      margin-bottom: 20px;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+    }
+    #secretZone {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 50px;
+      height: 50px;
+      background: transparent;
+      z-index: 1000;
+    }
+    #loading {
+      display: none;
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <header>⚡️ Nicky v1 Web Toolkit ⚡️</header>
+
+  <div id="loading" class="container">⏳ Loading...</div>
+
+  <div id="joinBox" class="container">
+    <h2>📢 Join Our Community</h2>
+    <p>You must join our channel before accessing tools:</p>
+    <p><a href="https://whatsapp.com/channel/0029VbBRnlgDOQITeT8H963i/339" target="_blank">🔗 Nicky v1</a></p>
+    <button onclick="proceedToLogin()">✅ I have joined</button>
+  </div>
+
+  <div id="loginBox" class="container" style="display:none;">
+    <h2>🔑 Enter Access Code</h2>
+    <input type="password" id="passwordInput" placeholder="Enter access code..." aria-label="Access code">
+    <button onclick="checkPassword()">🔓 Unlock</button>
+  </div>
+
+  <div id="toolSection" class="container" style="display:none;">
+    <h2>🛠 Available Tools</h2>
+    <input type="text" id="searchBox" placeholder="🔍 Search tools..." onkeyup="filterTools()">
+    <div id="toolsList"></div>
+  </div>
+
+  <div id="secretZone"></div>
+
+  <script>
+    const BIN_ID = "68c208b3d0ea881f40797bf1";
+    const API_KEY = "$2a$10$BJ8yiSLxN4FCKzCROuL.ReaLVp9LHnkIs1veCmrKNem/1SEoOTwBi";
+    const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    let binData = null;
+    let tapCount = 0;
+    let tapTimer = null;
+    let isLoading = true;
+
+    async function loadData() {
+      document.getElementById("loading").style.display = "block";
+      try {
+        let res = await fetch(BIN_URL, { headers: { "X-Master-Key": API_KEY } });
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        let data = await res.json();
+        binData = data.record;
+        console.log("✅ Data loaded", binData);
+        isLoading = false;
+        showInitialSection();
+      } catch (e) {
+        console.error("Load failed", e);
+        alert("❌ Failed to load data. Please refresh.");
+      } finally {
+        document.getElementById("loading").style.display = "none";
+      }
+    }
+
+    function showInitialSection() {
+      if (localStorage.getItem("joinedCommunity") === "true") {
+        document.getElementById("joinBox").style.display = "none";
+        document.getElementById("loginBox").style.display = "block";
+      }
+    }
+
+    function proceedToLogin() {
+      localStorage.setItem("joinedCommunity", "true");
+      document.getElementById("joinBox").style.display = "none";
+      document.getElementById("loginBox").style.display = "block";
+    }
+
+    function checkPassword() {
+      if (isLoading) {
+        alert("⏳ Please wait, loading data...");
+        return;
+      }
+      if (!binData) {
+        alert("❌ Data not loaded. Please refresh.");
+        return;
+      }
+      let input = document.getElementById("passwordInput").value;
+      if (input === binData.keys.toolkit) {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("toolSection").style.display = "block";
+        renderTools();
+      } else {
+        alert("❌ Invalid access code!");
+      }
+    }
+
+    function renderTools(filteredTools = binData.tools) {
+      let container = document.getElementById("toolsList");
+      container.innerHTML = "";
+      filteredTools.forEach(t => {
+        container.innerHTML += `
+          <div class="tool-item">
+            <span>${t.name}</span>
+            <a href="${t.link}" target="_blank">🔗 Open</a>
+          </div>
+        `;
+      });
+    }
+
+    function filterTools() {
+      let search = document.getElementById("searchBox").value.toLowerCase().trim();
+      let filtered = binData.tools.filter(t => t.name.toLowerCase().includes(search));
+      renderTools(filtered);
+    }
+
+    document.getElementById("secretZone").addEventListener("click", () => {
+      tapCount++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => { tapCount = 0; }, 5000);
+      if (tapCount >= 10) {
+        window.location.href = "admin.html";
+      }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
